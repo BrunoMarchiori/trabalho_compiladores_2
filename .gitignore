@@ -1,0 +1,30 @@
+# Compilação
+*.o
+*.out
+*.exe
+*.a
+*.so
+*.dylib
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build
+build/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
