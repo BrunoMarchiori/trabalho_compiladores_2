@@ -72,20 +72,20 @@ Os status usados neste relatorio sao:
 
 ## Cobertura Demonstravel por Testes
 
-Os testes por categoria ficam em `examples/r4rs_*.scm`.
+Os testes por categoria ficam em `examples/r4rs/valid/` e `examples/r4rs/invalid/`.
 
 | Arquivo | Categoria | Status esperado |
 | --- | --- | --- |
-| `r4rs_lexical.scm` | Lexico, comentarios, case-insensitivity, caracteres, strings e quote | Deve compilar e executar |
-| `r4rs_numbers.scm` | Numeros, radix, racionais, exatidao e procedimentos numericos basicos | Deve compilar e executar |
-| `r4rs_lists.scm` | Pares, listas, quote e procedimentos de lista | Deve compilar e executar |
-| `r4rs_lambda_scope.scm` | Lambda, escopo lexico, variadicos, closures, definicoes internas | Deve compilar e executar |
-| `r4rs_strings_chars_vectors.scm` | Strings, chars, comparacoes e vetores | Deve compilar e executar |
-| `r4rs_derived_forms.scm` | `if`, `cond`, `case`, `and`, `or`, `let`, `let*`, `letrec`, named let, `begin`, `delay`, `do` | Deve compilar e executar |
-| `r4rs_quasiquote.scm` | Quote/quasiquote simples, `unquote`, `unquote-splicing` | Deve compilar e executar |
-| `r4rs_io_control.scm` | I/O basico, `values`, `call-with-values`, conversoes numericas | Deve compilar e executar |
-| `r4rs_invalid_scope.scm` | Erros de escopo e aridade | Deve falhar na analise semantica |
-| `r4rs_invalid_type.scm` | Erros estaticos de tipo em built-ins | Deve falhar na analise semantica |
+| `examples/r4rs/valid/r4rs_lexical.scm` | Lexico, comentarios, case-insensitivity, caracteres, strings e quote | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_numbers.scm` | Numeros, radix, racionais, exatidao e procedimentos numericos basicos | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_lists.scm` | Pares, listas, quote e procedimentos de lista | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_lambda_scope.scm` | Lambda, escopo lexico, variadicos, closures, definicoes internas | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_strings_chars_vectors.scm` | Strings, chars, comparacoes e vetores | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_derived_forms.scm` | `if`, `cond`, `case`, `and`, `or`, `let`, `let*`, `letrec`, named let, `begin`, `delay`, `do` | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_quasiquote.scm` | Quote/quasiquote simples, `unquote`, `unquote-splicing` | Deve compilar e executar |
+| `examples/r4rs/valid/r4rs_io_control.scm` | I/O basico, `values`, `call-with-values`, conversoes numericas | Deve compilar e executar |
+| `examples/r4rs/invalid/r4rs_invalid_scope.scm` | Erros de escopo e aridade | Deve falhar na analise semantica |
+| `examples/r4rs/invalid/r4rs_invalid_type.scm` | Erros estaticos de tipo em built-ins | Deve falhar na analise semantica |
 
 ## Casos Nao Cobertos ou Limitados
 
