@@ -1,0 +1,35 @@
+; Testes de strings, caracteres e vetores.
+
+(define (check label expected actual)
+  (if (equal? expected actual)
+      (begin
+        (display "ok ")
+        (display label)
+        (newline))
+      (begin
+        (display "FAIL ")
+        (display label)
+        (display " expected=")
+        (write expected)
+        (display " actual=")
+        (write actual)
+        (newline)
+        (error "check failed"))))
+
+(define v (vector 1 2 3))
+
+(check 'string-length 5 (string-length "hello"))
+(check 'string-ref #\e (string-ref "hello" 1))
+(check 'string-append "hello!" (string-append "hello" "!"))
+(check 'substring "ell" (substring "hello" 1 4))
+(check 'string-ci-eq #t (string-ci=? "AbC" "aBc"))
+(check 'string-ci-lt #t (string-ci<? "abc" "BCD"))
+(check 'char->integer 65 (char->integer #\A))
+(check 'integer->char #\A (integer->char 65))
+(check 'char-gt #t (char>? #\b #\a))
+(check 'char-ci-eq #t (char-ci=? #\A #\a))
+(check 'vector-length 3 (vector-length v))
+(check 'vector-ref-before 2 (vector-ref v 1))
+(vector-set! v 1 9)
+(check 'vector-ref-after 9 (vector-ref v 1))
+(check 'vector->list '(1 9 3) (vector->list v))

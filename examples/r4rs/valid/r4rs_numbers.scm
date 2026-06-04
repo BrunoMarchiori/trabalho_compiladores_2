@@ -1,0 +1,36 @@
+; Testes de numeros R4RS: inteiros, radix, exatidao, racionais,
+; decimais e operacoes numericas basicas.
+
+(define (check label expected actual)
+  (if (equal? expected actual)
+      (begin
+        (display "ok ")
+        (display label)
+        (newline))
+      (begin
+        (display "FAIL ")
+        (display label)
+        (display " expected=")
+        (write expected)
+        (display " actual=")
+        (write actual)
+        (newline)
+        (error "check failed"))))
+
+(check 'integer-add 6 (+ 1 2 3))
+(check 'binary 10 #b1010)
+(check 'octal 10 #o12)
+(check 'decimal 10 #d10)
+(check 'hexadecimal 10 #x0a)
+(check 'exact-hex 10 #e#x0a)
+(check 'inexact-decimal 4.0 (+ 1.5 2.5))
+(check 'rational-add 3/4 (+ 1/2 1/4))
+(check 'division-rational 1/2 (/ 1 2))
+(check 'exact-predicate #t (exact? 1/2))
+(check 'inexact-predicate #t (inexact? 1.5))
+(check 'numerator 3 (numerator 3/4))
+(check 'denominator 4 (denominator 3/4))
+(check 'exact->inexact 2.0 (exact->inexact 2))
+(check 'inexact->exact 3/2 (inexact->exact 1.5))
+(check 'quotient 3 (quotient 10 3))
+(check 'modulo 1 (modulo 10 3))

@@ -39,13 +39,15 @@ sudo apt install g++ make flex bison python3
 ├── Makefile
 ├── scheme_runtime.py
 ├── examples/
-│   ├── valid_factorial.scm
-│   ├── valid_fibonacci.scm
-│   ├── valid_lists.scm
-│   ├── valid_closures.scm
-│   ├── valid_higher_order.scm
-│   ├── invalid_scope.scm
-│   └── invalid_type.scm
+│   ├── README.md
+│   ├── basic/
+│   │   ├── valid/
+│   │   └── invalid/
+│   └── r4rs/
+│       ├── valid/
+│       └── invalid/
+├── scripts/
+│   └── run_tests.sh
 └── src/
     ├── scanner.l
     ├── parser.y
@@ -65,7 +67,8 @@ Principais arquivos:
 - `src/analyzer.*`: verificação semântica, tipos, aridade e identificadores.
 - `src/codegen.*`: geracao de código Python.
 - `scheme_runtime.py`: funções auxiliares usadas pelo Python gerado.
-- `examples/`: programas de teste válidos e inválidos.
+- `examples/`: programas de teste organizados por categoria.
+- `scripts/run_tests.sh`: bateria de testes automatizada.
 - `RELATORIO.md`: matriz de aderência ao R4RS, limitações e status da implementação.
 
 ## Compilação
@@ -99,13 +102,13 @@ O compilador recebe um arquivo Scheme de entrada e, opcionalmente, um arquivo Py
 Exemplo:
 
 ```bash
-./compilador_scheme examples/valid_factorial.scm output.py
+./compilador_scheme examples/basic/valid/valid_factorial.scm output.py
 python3 output.py
 ```
 
 Se o arquivo de saída for omitido, o código Python gerado e impresso na saída padrão:
 ```bash
-./compilador_scheme examples/valid_factorial.scm
+./compilador_scheme examples/basic/valid/valid_factorial.scm
 ```
 
 Também existem alvos auxiliares no `Makefile`.
@@ -113,13 +116,13 @@ Também existem alvos auxiliares no `Makefile`.
 Para compilar, gerar Python e executar:
 
 ```bash
-make run FILE=examples/valid_factorial.scm
+make run FILE=examples/basic/valid/valid_factorial.scm
 ```
 
 Para apenas mostrar o Python gerado:
 
 ```bash
-make show FILE=examples/valid_factorial.scm
+make show FILE=examples/basic/valid/valid_factorial.scm
 ```
 
 ## Exemplos
@@ -127,21 +130,35 @@ make show FILE=examples/valid_factorial.scm
 Exemplos válidos:
 
 ```bash
-make run FILE=examples/valid_factorial.scm
-make run FILE=examples/valid_fibonacci.scm
-make run FILE=examples/valid_lists.scm
-make run FILE=examples/valid_closures.scm
-make run FILE=examples/valid_higher_order.scm
+make run FILE=examples/basic/valid/valid_factorial.scm
+make run FILE=examples/basic/valid/valid_fibonacci.scm
+make run FILE=examples/basic/valid/valid_lists.scm
+make run FILE=examples/basic/valid/valid_closures.scm
+make run FILE=examples/basic/valid/valid_higher_order.scm
 ```
 
 Exemplos inválidos:
 
 ```bash
-make show FILE=examples/invalid_scope.scm
-make show FILE=examples/invalid_type.scm
+make show FILE=examples/basic/invalid/invalid_scope.scm
+make show FILE=examples/basic/invalid/invalid_type.scm
 ```
 
 Os exemplos inválidos foram criados para exercitar mensagens de erro relacionadas a identificadores não definidos, erros de aridade e usos inválidos de tipos.
+
+Para rodar todos os exemplos validos e garantir que os invalidos falham, compile e execute o script:
+
+```bash
+make
+./scripts/run_tests.sh
+```
+
+Os testes R4RS ficam em:
+
+```text
+examples/r4rs/valid/
+examples/r4rs/invalid/
+```
 
 ## Subconjunto de Scheme Suportado
 
