@@ -124,6 +124,18 @@ def _is_integer(x):   return isinstance(x, int) or (isinstance(x, float) and x =
 def _is_real(x):      return isinstance(x, (int, float, Fraction))
 def _is_rational(x):  return isinstance(x, (int, Fraction))
 def _is_complex(x):   return isinstance(x, (int, float, complex, Fraction))
+def _is_exact(x):     return isinstance(x, (int, Fraction)) and not isinstance(x, bool)
+def _is_inexact(x):   return isinstance(x, (float, complex))
+def _numerator(x):
+    if isinstance(x, Fraction): return x.numerator
+    if isinstance(x, int): return x
+    return Fraction(x).limit_denominator().numerator
+def _denominator(x):
+    if isinstance(x, Fraction): return x.denominator
+    if isinstance(x, int): return 1
+    return Fraction(x).limit_denominator().denominator
+def _exact_to_inexact(x): return float(x)
+def _inexact_to_exact(x): return Fraction(x).limit_denominator()
 
 # ── Igualdade ────────────────────────────────────────────────
 
@@ -201,7 +213,7 @@ def _map(f, *lists):
 
 def _for_each(f, *lists):
     for args in zip(*lists):
-        f(*args) if len(lists) > 1 else f(args)
+        f(*args)
 
 def _apply(f, *args):
     if not args: return f()
@@ -238,6 +250,11 @@ def _string_lt(a, b): return a < b
 def _string_gt(a, b): return a > b
 def _string_le(a, b): return a <= b
 def _string_ge(a, b): return a >= b
+def _string_ci_eq(a, b): return a.lower() == b.lower()
+def _string_ci_lt(a, b): return a.lower() < b.lower()
+def _string_ci_gt(a, b): return a.lower() > b.lower()
+def _string_ci_le(a, b): return a.lower() <= b.lower()
+def _string_ci_ge(a, b): return a.lower() >= b.lower()
 def _string_upcase(s): return s.upper()
 def _string_downcase(s): return s.lower()
 def _string_copy(s): return str(s)
@@ -269,6 +286,14 @@ def _char_to_int(c): return ord(c)
 def _int_to_char(n): return chr(n)
 def _char_eq(a, b): return a == b
 def _char_lt(a, b): return a < b
+def _char_gt(a, b): return a > b
+def _char_le(a, b): return a <= b
+def _char_ge(a, b): return a >= b
+def _char_ci_eq(a, b): return a.lower() == b.lower()
+def _char_ci_lt(a, b): return a.lower() < b.lower()
+def _char_ci_gt(a, b): return a.lower() > b.lower()
+def _char_ci_le(a, b): return a.lower() <= b.lower()
+def _char_ci_ge(a, b): return a.lower() >= b.lower()
 def _char_alpha(c): return c.isalpha()
 def _char_num(c):   return c.isdigit()
 def _char_ws(c):    return c.isspace()
@@ -425,3 +450,8 @@ def _cons_list(items):
         else:
             result.append(item)
     return result
+
+__all__ = [
+    name for name in globals()
+    if name.startswith("_") and not name.startswith("__")
+]

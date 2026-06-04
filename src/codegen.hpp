@@ -18,12 +18,14 @@ class CodeGen {
         bool                  isTopLevel;
     };
     std::vector<Scope> scopes;
+    std::vector<std::map<std::string, std::string>> boxedAliases;
 
     std::string newTemp();
     std::string newLambda();
 
     // converte identificador Scheme para Python
     std::string pyId(const std::string& s);
+    bool lookupBoxedAlias(const std::string& name, std::string& box) const;
 
     // coleta targets de set! (sem descer em lambdas internas)
     void collectMutations(Node* n, std::set<std::string>& out);
@@ -46,6 +48,7 @@ class CodeGen {
     // expressões especiais
     std::string genIfExpr    (Node* n);
     std::string genCondExpr  (Node* n);
+    std::string genCaseExpr  (Node* n);
     std::string genAndExpr   (Node* n);
     std::string genOrExpr    (Node* n);
     std::string genLetExpr   (Node* n, const std::string& kind);
@@ -62,11 +65,12 @@ class CodeGen {
     std::string genSetStmt      (Node* n, int il);
     std::string genIfStmt       (Node* n, int il);
     std::string genCondStmt     (Node* n, int il);
+    std::string genCaseStmt     (Node* n, int il);
     std::string genWhenStmt     (Node* n, int il);
     std::string genUnlessStmt   (Node* n, int il);
     std::string genLetStmt      (Node* n, const std::string& kind, int il);
     std::string genNamedLetStmt (Node* n, int il);
-    std::string genDoStmt       (Node* n, int il);
+    std::string genDoStmt       (Node* n, int il, bool withReturn = false);
     std::string genBeginStmt    (const std::vector<Node*>& body, int il, bool withReturn = false);
     std::string genFuncBody     (const std::vector<Node*>& body, int il,
                                   const std::set<std::string>& params);

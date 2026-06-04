@@ -66,6 +66,7 @@ Principais arquivos:
 - `src/codegen.*`: geracao de código Python.
 - `scheme_runtime.py`: funções auxiliares usadas pelo Python gerado.
 - `examples/`: programas de teste válidos e inválidos.
+- `RELATORIO.md`: matriz de aderência ao R4RS, limitações e status da implementação.
 
 ## Compilação
 
@@ -206,6 +207,8 @@ Por isso, para executar o Python gerado, o arquivo `scheme_runtime.py` deve esta
 ## Limitações Conhecidas
 
 Este compilador implementa um subconjunto de Scheme, não a linguagem completa especificada pelas referencias R4RS/R5RS.
+
+Consulte também `RELATORIO.md` para a matriz de aderência ao R4RS e o status detalhado de cada área da especificação.
 
 Limitações importantes:
 

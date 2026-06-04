@@ -52,8 +52,14 @@ program
     : datum_list
         {
             Node* prog = makeProgram(1, 1);
-            /* converte a lista ligada de datums em vetor de filhos */
+            /* datum_list acumula em ordem inversa; restauramos a ordem do arquivo. */
+            Node* ordered = makeNil(yylineno, 0);
             Node* cur = $1;
+            while (cur && cur->kind == NK_PAIR) {
+                ordered = makePair(cur->car, ordered, yylineno, 0);
+                cur = cur->cdr;
+            }
+            cur = ordered;
             while (cur && cur->kind == NK_PAIR) {
                 prog->children.push_back(cur->car);
                 cur = cur->cdr;

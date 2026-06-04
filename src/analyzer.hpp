@@ -31,10 +31,17 @@ class Analyzer {
     SchemeType analyzeUnless  (Node* n);
     SchemeType analyzeDo      (Node* n);
     SchemeType analyzeQuasi   (Node* n);
+    void       analyzeQuasiDatum(Node* n, int depth);
     SchemeType analyzeApp     (Node* n);
     SchemeType quoteType      (Node* n);
 
     void analyzeBodyList(const std::vector<Node*>& body);
+    void predeclareBody(const std::vector<Node*>& body);
+    void checkBuiltinTypes(const std::string& name,
+                           const std::vector<SchemeType>& argTypes,
+                           Node* call);
+    void checkArg(const std::string& proc, int argIndex, SchemeType actual,
+                  const std::string& expected, bool ok, Node* call);
 
 public:
     explicit Analyzer(SymTable& sym);

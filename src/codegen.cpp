@@ -26,16 +26,27 @@ const std::map<std::string, std::string> CodeGen::BUILTINS = {
     {"string-append","_string_append"},{"substring","_substring"},
     {"string=?","_string_eq"},{"string<?","_string_lt"},{"string>?","_string_gt"},
     {"string<=?","_string_le"},{"string>=?","_string_ge"},
+    {"string-ci=?","_string_ci_eq"},{"string-ci<?","_string_ci_lt"},
+    {"string-ci>?","_string_ci_gt"},{"string-ci<=?","_string_ci_le"},
+    {"string-ci>=?","_string_ci_ge"},
     {"string->symbol","_string_to_symbol"},{"symbol->string","_symbol_to_string"},
     {"string->list","_string_to_list"},{"list->string","_list_to_string"},
     {"string-upcase","_string_upcase"},{"string-downcase","_string_downcase"},
     {"string-copy","_string_copy"},{"string","_mk_string"},{"make-string","_make_string"},
     {"char->integer","_char_to_int"},{"integer->char","_int_to_char"},
-    {"char=?","_char_eq"},{"char<?","_char_lt"},{"char-alphabetic?","_char_alpha"},
+    {"char=?","_char_eq"},{"char<?","_char_lt"},{"char>?","_char_gt"},
+    {"char<=?","_char_le"},{"char>=?","_char_ge"},
+    {"char-ci=?","_char_ci_eq"},{"char-ci<?","_char_ci_lt"},
+    {"char-ci>?","_char_ci_gt"},{"char-ci<=?","_char_ci_le"},
+    {"char-ci>=?","_char_ci_ge"},
+    {"char-alphabetic?","_char_alpha"},
     {"char-numeric?","_char_num"},{"char-whitespace?","_char_ws"},
     {"char-upcase","_char_up"},{"char-downcase","_char_dn"},
     {"number?","_is_number"},{"integer?","_is_integer"},{"real?","_is_real"},
     {"rational?","_is_rational"},{"complex?","_is_complex"},
+    {"exact?","_is_exact"},{"inexact?","_is_inexact"},
+    {"numerator","_numerator"},{"denominator","_denominator"},
+    {"exact->inexact","_exact_to_inexact"},{"inexact->exact","_inexact_to_exact"},
     {"string?","_is_string"},{"symbol?","_is_symbol"},{"boolean?","_is_boolean"},
     {"char?","_is_char"},{"procedure?","_is_procedure"},{"vector?","_is_vector"},
     {"port?","_is_port"},{"input-port?","_is_input_port"},{"output-port?","_is_output_port"},
@@ -91,6 +102,17 @@ std::string CodeGen::pyId(const std::string& s) {
     if (r.empty()) r = "_sym";
     if (PY_KEYWORDS.count(r)) r = "_" + r + "_";
     return r;
+}
+
+bool CodeGen::lookupBoxedAlias(const std::string& name, std::string& box) const {
+    for (int i = (int)boxedAliases.size() - 1; i >= 0; i--) {
+        auto it = boxedAliases[i].find(name);
+        if (it != boxedAliases[i].end()) {
+            box = it->second;
+            return !box.empty();
+        }
+    }
+    return false;
 }
 
 std::string CodeGen::ind(int level) {
@@ -149,6 +171,32 @@ bool CodeGen::containsSetBang(Node* n) {
     return false;
 }
 
+static void collectSetTargetsDeep(Node* n, std::set<std::string>& out,
+                                  std::set<Node*>& seen) {
+    if (!n || seen.count(n)) return;
+    seen.insert(n);
+
+    if (n->kind == NK_PAIR) {
+        if (isSymbol(n->car, "set!")) {
+            auto items = listToVec(n);
+            if (items.size() >= 2 && items[1]->kind == NK_SYMBOL)
+                out.insert(items[1]->sval);
+        }
+        collectSetTargetsDeep(n->car, out, seen);
+        collectSetTargetsDeep(n->cdr, out, seen);
+    } else if (n->kind == NK_VECTOR) {
+        collectSetTargetsDeep(n->car, out, seen);
+    } else if (n->kind == NK_PROGRAM) {
+        for (Node* child : n->children)
+            collectSetTargetsDeep(child, out, seen);
+    }
+}
+
+static void collectSetTargetsDeep(Node* n, std::set<std::string>& out) {
+    std::set<Node*> seen;
+    collectSetTargetsDeep(n, out, seen);
+}
+
 // ─────────────── genExpr ───────────────
 
 std::string CodeGen::genExpr(Node* n) {
@@ -195,7 +243,12 @@ std::string CodeGen::genExpr(Node* n) {
             return "'" + cv + "'";
         }
         case NK_SYMBOL:
+        {
+            std::string box;
+            if (lookupBoxedAlias(n->sval, box))
+                return box + "[0]";
             return pyId(n->sval);
+        }
         case NK_NIL:
             return "[]";
         case NK_PAIR: {
@@ -204,6 +257,7 @@ std::string CodeGen::genExpr(Node* n) {
                 const std::string& s = n->car->sval;
                 if (s == "if")          return genIfExpr(n);
                 if (s == "cond")        return genCondExpr(n);
+                if (s == "case")        return genCaseExpr(n);
                 if (s == "and")         return genAndExpr(n);
                 if (s == "or")          return genOrExpr(n);
                 if (s == "let")         return genLetExpr(n, "let");
@@ -241,8 +295,9 @@ std::string CodeGen::genExpr(Node* n) {
                     // set! em contexto de expressão: retorna None como efeito colateral
                     auto items = listToVec(n);
                     if (items.size() >= 3 && items[1]->kind == NK_SYMBOL) {
-                        // Usa exec via runtime helper
-                        return "_set_var(lambda v: None, " + genExpr(items[2]) + ")";
+                        std::string box;
+                        if (lookupBoxedAlias(items[1]->sval, box))
+                            return box + ".__setitem__(0, " + genExpr(items[2]) + ")";
                     }
                     return "None";
                 }
@@ -303,14 +358,46 @@ std::string CodeGen::genCondExpr(Node* n) {
     return result;
 }
 
+std::string CodeGen::genCaseExpr(Node* n) {
+    auto items = listToVec(n);
+    if (items.size() < 3) return "None";
+
+    std::string key = newTemp();
+    std::string result = "None";
+    for (int i = (int)items.size() - 1; i >= 2; i--) {
+        auto clause = listToVec(items[i]);
+        if (clause.empty()) continue;
+        std::vector<Node*> body(clause.begin() + 1, clause.end());
+        std::string val = body.empty() ? "None" : genBeginExpr(body);
+
+        if (isSymbol(clause[0], "else")) {
+            result = val;
+            continue;
+        }
+
+        auto datums = listToVec(clause[0]);
+        std::string choices = "[";
+        for (size_t j = 0; j < datums.size(); j++) {
+            if (j) choices += ", ";
+            choices += genQuoteExpr(datums[j]);
+        }
+        choices += "]";
+        result = "(" + val + " if _truthy(_memv(" + key + ", " +
+                 choices + ")) else " + result + ")";
+    }
+    return "(lambda " + key + ": " + result + ")(" + genExpr(items[1]) + ")";
+}
+
 std::string CodeGen::genAndExpr(Node* n) {
     auto items = listToVec(n); items.erase(items.begin());
     if (items.empty()) return "True";
     // short-circuit correto
     std::string result = genExpr(items.back());
     for (int i = (int)items.size()-2; i >= 0; i--) {
+        std::string t = newTemp();
         std::string e = genExpr(items[i]);
-        result = "(" + e + " if not _truthy(" + e + ") else " + result + ")";
+        result = "((" + t + " := " + e + "), " + t +
+                 " if not _truthy(" + t + ") else " + result + ")[-1]";
     }
     return result;
 }
@@ -322,7 +409,8 @@ std::string CodeGen::genOrExpr(Node* n) {
     for (int i = (int)items.size()-2; i >= 0; i--) {
         std::string t = newTemp();
         std::string e = genExpr(items[i]);
-        result = "(_or_val := " + e + ", _or_val if _truthy(_or_val) else " + result + ")[-1]";
+        result = "((" + t + " := " + e + "), " + t +
+                 " if _truthy(" + t + ") else " + result + ")[-1]";
     }
     return result;
 }
@@ -392,14 +480,30 @@ std::string CodeGen::genLetExpr(Node* n, const std::string& kind) {
         // (lambda (vars) body)(vals)
         std::string params, vals;
         auto bv = listToVec(bindings);
+        std::set<std::string> mutated;
+        for (Node* b : body) collectSetTargetsDeep(b, mutated);
+        std::map<std::string, std::string> aliasScope;
+
         for (size_t i = 0; i < bv.size(); i++) {
             auto bnd = listToVec(bv[i]);
             if (bnd.size() < 2) continue;
             if (i) { params += ", "; vals += ", "; }
-            params += pyId(bnd[0]->sval);
-            vals   += genExpr(bnd[1]);
+            std::string name = bnd[0]->sval;
+            if (mutated.count(name)) {
+                std::string box = "_box_" + pyId(name);
+                params += box;
+                vals   += "[" + genExpr(bnd[1]) + "]";
+                aliasScope[name] = box;
+            } else {
+                params += pyId(name);
+                vals   += genExpr(bnd[1]);
+                aliasScope[name] = "";
+            }
         }
-        return "(lambda " + params + ": " + genBeginExpr(body) + ")(" + vals + ")";
+        boxedAliases.push_back(aliasScope);
+        std::string bodyExpr = genBeginExpr(body);
+        boxedAliases.pop_back();
+        return "(lambda " + params + ": " + bodyExpr + ")(" + vals + ")";
     }
     if (kind == "let*") {
         // encadeamento de lambdas
@@ -416,19 +520,17 @@ std::string CodeGen::genLetExpr(Node* n, const std::string& kind) {
     }
     // letrec: mutação necessária
     auto bv = listToVec(bindings);
-    std::string params, inits, updates;
+    std::string exprs;
     for (size_t i = 0; i < bv.size(); i++) {
         auto bnd = listToVec(bv[i]);
         if (bnd.size() < 2) continue;
-        if (i) { params += ", "; inits += ", "; }
-        params += pyId(bnd[0]->sval);
-        inits  += "None";
-        updates += pyId(bnd[0]->sval) + " = " + genExpr(bnd[1]) + "; ";
+        if (!exprs.empty()) exprs += ", ";
+        exprs += "(" + pyId(bnd[0]->sval) + " := " + genExpr(bnd[1]) + ")";
     }
-    // Limitação: letrec como expressão pura é complexo em Python
-    // Geramos um aviso no comentário
     std::string bodyStr = genBeginExpr(body);
-    return "(lambda " + params + ": " + bodyStr + ")(" + inits + ")  # letrec simplificado";
+    if (!exprs.empty()) exprs += ", ";
+    exprs += bodyStr;
+    return "(lambda: [" + exprs + "][-1])()";
 }
 
 std::string CodeGen::genNamedLetExpr(Node* n) {
@@ -446,12 +548,8 @@ std::string CodeGen::genNamedLetExpr(Node* n) {
     }
     std::vector<Node*> body(items.begin()+3, items.end());
     std::string bodyStr = genBeginExpr(body);
-    // Não é possível gerar uma função recursiva como expressão pura em Python
-    // Emitimos uma IIFE com definição interna (limitação documentada)
-    std::string tmp = newLambda();
-    return "(__import__('functools').reduce(lambda " + tmp + ", _: " + tmp +
-           ", [], (lambda " + fname + ": " + fname + "(" + initVals + "))" +
-           "(lambda " + params + ": " + bodyStr + ")))";
+    return "(lambda: [(" + fname + " := (lambda " + params + ": " +
+           bodyStr + ")), " + fname + "(" + initVals + ")][-1])()";
 }
 
 std::string CodeGen::genDoExpr(Node* n) {
@@ -532,6 +630,8 @@ std::string CodeGen::genQuasiExpr(Node* data) {
 
 std::string CodeGen::genAppExpr(Node* n) {
     std::string func = genExpr(n->car);
+    if (n->car && n->car->kind == NK_PAIR)
+        func = "(" + func + ")";
     std::string args;
     Node* a = n->cdr;
     bool first = true;
@@ -574,6 +674,7 @@ std::string CodeGen::genStmt(Node* n, int il) {
         if (s == "set!")     return genSetStmt(n, il);
         if (s == "if")       return genIfStmt(n, il);
         if (s == "cond")     return genCondStmt(n, il);
+        if (s == "case")     return genCaseStmt(n, il);
         if (s == "when")     return genWhenStmt(n, il);
         if (s == "unless")   return genUnlessStmt(n, il);
         if (s == "let")      return genLetStmt(n, "let", il);
@@ -631,8 +732,11 @@ std::string CodeGen::genDefineStmt(Node* n, int il) {
 std::string CodeGen::genSetStmt(Node* n, int il) {
     auto items = listToVec(n);
     if (items.size() < 3 || items[1]->kind != NK_SYMBOL) return ind(il) + "pass\n";
+    std::string box;
     std::string var = pyId(items[1]->sval);
     std::string val = genExpr(items[2]);
+    if (lookupBoxedAlias(items[1]->sval, box))
+        return ind(il) + box + "[0] = " + val + "\n";
 
     // Determina se precisa de nonlocal/global
     std::string decl;
@@ -695,6 +799,41 @@ std::string CodeGen::genCondStmt(Node* n, int il) {
             }
             first = false;
         }
+    }
+    return out;
+}
+
+std::string CodeGen::genCaseStmt(Node* n, int il) {
+    auto items = listToVec(n);
+    if (items.size() < 3) return ind(il) + "pass\n";
+
+    std::string key = newTemp();
+    std::string out = ind(il) + key + " = " + genExpr(items[1]) + "\n";
+    bool first = true;
+
+    for (size_t i = 2; i < items.size(); i++) {
+        auto clause = listToVec(items[i]);
+        if (clause.empty()) continue;
+        std::vector<Node*> body(clause.begin() + 1, clause.end());
+
+        if (isSymbol(clause[0], "else")) {
+            out += ind(il) + std::string(first ? "if True" : "else") + ":\n";
+            first = false;
+        } else {
+            auto datums = listToVec(clause[0]);
+            std::string choices = "[";
+            for (size_t j = 0; j < datums.size(); j++) {
+                if (j) choices += ", ";
+                choices += genQuoteExpr(datums[j]);
+            }
+            choices += "]";
+            out += ind(il) + std::string(first ? "if" : "elif") +
+                   " _truthy(_memv(" + key + ", " + choices + ")):\n";
+            first = false;
+        }
+
+        if (body.empty()) out += ind(il+1) + "pass\n";
+        else out += genBeginStmt(body, il+1);
     }
     return out;
 }
@@ -803,7 +942,7 @@ std::string CodeGen::genNamedLetStmt(Node* n, int il) {
     return out;
 }
 
-std::string CodeGen::genDoStmt(Node* n, int il) {
+std::string CodeGen::genDoStmt(Node* n, int il, bool withReturn) {
     // (do ((var init step)...) (test result...) body...)
     auto items = listToVec(n);
     if (items.size() < 3) return ind(il) + "pass  # do inválido\n";
@@ -830,17 +969,22 @@ std::string CodeGen::genDoStmt(Node* n, int il) {
     if (body.empty()) out += ind(il+1) + "pass\n";
     else out += genBeginStmt(body, il+1);
     // atualização das variáveis (com temps para evitar conflito)
+    std::vector<std::pair<std::string, std::string>> updates;
     for (auto* vs : varSpecs) {
         auto sv = listToVec(vs);
         if (sv.size() < 3) continue;
         std::string t   = newTemp();
         std::string var = pyId(sv[0]->sval);
         out += ind(il+1) + t + " = " + genExpr(sv[2]) + "\n";
-        out += ind(il+1) + var + " = " + t + "\n";
+        updates.push_back({var, t});
     }
+    for (auto& [var, t] : updates)
+        out += ind(il+1) + var + " = " + t + "\n";
     // resultado
     if (!result.empty()) {
-        out += genBeginStmt(result, il);
+        out += genBeginStmt(result, il, withReturn);
+    } else if (withReturn) {
+        out += ind(il) + "return None\n";
     }
     return out;
 }
@@ -849,10 +993,14 @@ std::string CodeGen::genBeginStmt(const std::vector<Node*>& body, int il, bool w
     if (body.empty()) return ind(il) + "pass\n";
     std::string out;
     for (size_t i = 0; i < body.size(); i++) {
-        if (withReturn && i == body.size()-1)
-            out += ind(il) + "return " + genExpr(body[i]) + "\n";
-        else
+        if (withReturn && i == body.size()-1) {
+            if (body[i] && body[i]->kind == NK_PAIR && isSymbol(body[i]->car, "do"))
+                out += genDoStmt(body[i], il, true);
+            else
+                out += ind(il) + "return " + genExpr(body[i]) + "\n";
+        } else {
             out += genStmt(body[i], il);
+        }
     }
     return out;
 }

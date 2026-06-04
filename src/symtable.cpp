@@ -22,6 +22,12 @@ SymTable::SymTable() {
     for (const char* n : {"zero?", "positive?", "negative?", "odd?", "even?",
                           "number?", "integer?", "real?", "rational?", "complex?"})
         defBuiltin(n, ST_BOOLEAN, 1);
+    defBuiltin("exact?",   ST_BOOLEAN, 1);
+    defBuiltin("inexact?", ST_BOOLEAN, 1);
+    defBuiltin("numerator",   ST_NUMBER, 1);
+    defBuiltin("denominator", ST_NUMBER, 1);
+    defBuiltin("exact->inexact", ST_FLOAT, 1);
+    defBuiltin("inexact->exact", ST_RATIONAL, 1);
 
     // igualdade
     for (const char* n : {"eq?", "eqv?", "equal?"})
@@ -74,13 +80,18 @@ SymTable::SymTable() {
     defBuiltin("string-ref",      ST_CHAR,    2);
     defBuiltin("string-append",   ST_STRING, -2);
     defBuiltin("substring",       ST_STRING,  3);
-    defBuiltin("string->number",  ST_ANY,     1);
-    defBuiltin("number->string",  ST_STRING,  1);
+    defBuiltin("string->number",  ST_ANY,    -2);
+    defBuiltin("number->string",  ST_STRING, -2);
     defBuiltin("string=?",        ST_BOOLEAN, 2);
     defBuiltin("string<?",        ST_BOOLEAN, 2);
     defBuiltin("string>?",        ST_BOOLEAN, 2);
     defBuiltin("string<=?",       ST_BOOLEAN, 2);
     defBuiltin("string>=?",       ST_BOOLEAN, 2);
+    defBuiltin("string-ci=?",     ST_BOOLEAN, 2);
+    defBuiltin("string-ci<?",     ST_BOOLEAN, 2);
+    defBuiltin("string-ci>?",     ST_BOOLEAN, 2);
+    defBuiltin("string-ci<=?",    ST_BOOLEAN, 2);
+    defBuiltin("string-ci>=?",    ST_BOOLEAN, 2);
     defBuiltin("string->symbol",  ST_SYMBOL,  1);
     defBuiltin("symbol->string",  ST_STRING,  1);
     defBuiltin("string->list",    ST_LIST,    1);
@@ -101,6 +112,13 @@ SymTable::SymTable() {
     defBuiltin("char=?",           ST_BOOLEAN, 2);
     defBuiltin("char<?",           ST_BOOLEAN, 2);
     defBuiltin("char>?",           ST_BOOLEAN, 2);
+    defBuiltin("char<=?",          ST_BOOLEAN, 2);
+    defBuiltin("char>=?",          ST_BOOLEAN, 2);
+    defBuiltin("char-ci=?",        ST_BOOLEAN, 2);
+    defBuiltin("char-ci<?",        ST_BOOLEAN, 2);
+    defBuiltin("char-ci>?",        ST_BOOLEAN, 2);
+    defBuiltin("char-ci<=?",       ST_BOOLEAN, 2);
+    defBuiltin("char-ci>=?",       ST_BOOLEAN, 2);
     defBuiltin("char-alphabetic?", ST_BOOLEAN, 1);
     defBuiltin("char-numeric?",    ST_BOOLEAN, 1);
     defBuiltin("char-whitespace?", ST_BOOLEAN, 1);
