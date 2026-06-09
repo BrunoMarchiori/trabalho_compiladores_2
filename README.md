@@ -1,19 +1,21 @@
 # Compilador Scheme para Python
 
-Trabalho da segunda entrega da disciplina de Compiladores.
+Projeto da segunda entrega da disciplina de Compiladores.
 
-O projeto implementa um compilador para um subconjunto da linguagem Scheme. A entrada e um programa `.scm`, que passa por scanner, parser bottom-up, construção de AST, verificação semântica e geração de código Python.
+O projeto implementa um compilador para um subconjunto da linguagem Scheme. O programa de entrada, escrito em um arquivo `.scm`, passa por análise léxica, análise sintática bottom-up, construção de AST, verificação semântica de tipos e de contexto de identificadores, e geração de código Python.
 
-## Objetivo
+## Objetivo da entrega
 
-A entrega atende ao requisito de implementar:
+A entrega atende ao enunciado por implementar:
 
-- scanner usando Flex;
-- parser bottom-up usando Bison;
-- verificacao de tipos e contexto de identificadores;
+- scanner com Flex;
+- parser bottom-up com Bison;
+- verificação de tipos básicos;
+- verificação de contexto de identificadores com tabela de símbolos e escopos;
 - geração de código Python a partir de programas Scheme;
-- exemplos válidos e inválidos;
-- Makefile com regras de compilação e execução.
+- arquivos de exemplo válidos e inválidos;
+- Makefile com regras de compilação e execução;
+- relatório com limitações conhecidas e atuação dos integrantes.
 
 ## Tecnologias
 
@@ -32,14 +34,15 @@ sudo apt update
 sudo apt install g++ make flex bison python3
 ```
 
-## Estrutura do Projeto
+## Estrutura do projeto
 
 ```text
 .
 ├── Makefile
+├── README.md
+├── RELATORIO.md
 ├── scheme_runtime.py
 ├── examples/
-│   ├── README.md
 │   ├── basic/
 │   │   ├── valid/
 │   │   └── invalid/
@@ -64,12 +67,13 @@ Principais arquivos:
 - `src/parser.y`: gramática bottom-up usando Bison.
 - `src/ast.*`: estruturas da árvore sintática abstrata.
 - `src/symtable.*`: tabela de símbolos e controle de escopos.
-- `src/analyzer.*`: verificação semântica, tipos, aridade e identificadores.
-- `src/codegen.*`: geracao de código Python.
+- `src/analyzer.*`: verificação semântica, incluindo tipos, aridade e identificadores.
+- `src/codegen.*`: geração de código Python.
+- `src/main.cpp`: driver principal do compilador.
 - `scheme_runtime.py`: funções auxiliares usadas pelo Python gerado.
 - `examples/`: programas de teste organizados por categoria.
-- `scripts/run_tests.sh`: bateria de testes automatizada.
-- `RELATORIO.md`: matriz de aderência ao R4RS, limitações e status da implementação.
+- `scripts/run_tests.sh`: script de testes automatizados.
+- `RELATORIO.md`: relatório da entrega, com limitações, aderência ao R4RS e atuação dos membros.
 
 ## Compilação
 
@@ -106,7 +110,8 @@ Exemplo:
 python3 output.py
 ```
 
-Se o arquivo de saída for omitido, o código Python gerado e impresso na saída padrão:
+Se o arquivo de saída for omitido, o código Python gerado é exibido no terminal:
+
 ```bash
 ./compilador_scheme examples/basic/valid/valid_factorial.scm
 ```
@@ -125,7 +130,7 @@ Para apenas mostrar o Python gerado:
 make show FILE=examples/basic/valid/valid_factorial.scm
 ```
 
-## Exemplos
+## Exemplos e testes
 
 Exemplos válidos:
 
@@ -146,26 +151,28 @@ make show FILE=examples/basic/invalid/invalid_type.scm
 
 Os exemplos inválidos foram criados para exercitar mensagens de erro relacionadas a identificadores não definidos, erros de aridade e usos inválidos de tipos.
 
-Para rodar todos os exemplos validos e garantir que os invalidos falham, compile e execute o script:
+Para rodar todos os exemplos e garantir se eles estão rodando da forma correta:
 
 ```bash
 make
 ./scripts/run_tests.sh
 ```
 
-Os testes R4RS ficam em:
+Os testes inspirados no R4RS ficam em:
 
 ```text
 examples/r4rs/valid/
 examples/r4rs/invalid/
 ```
 
-## Subconjunto de Scheme Suportado
+## Subconjunto de Scheme suportado
 
 O scanner reconhece:
 
 - inteiros, floats e racionais;
-- booleanos `#t`, `#f`, `#true`, `#false`;
+- prefixos numéricos como `#b`, `#o`, `#d` e `#x`;
+- marcadores de exatidão como `#e` e `#i`;
+- booleanos `#t`, `#f`, `#true` e `#false`;
 - strings com escapes;
 - caracteres;
 - símbolos;
@@ -175,24 +182,25 @@ O scanner reconhece:
 - abreviações como quote, quasiquote, unquote e unquote-splicing;
 - comentários de linha e comentários de bloco.
 
-O parser e o gerador tratam formas e operações como:
+O parser, o analisador semântico e o gerador tratam formas e operações como:
 
 - `define`;
 - `lambda`;
 - `if`;
 - `cond`;
 - `case`;
-- `let`, `let*`, `letrec` e named let;
+- `let`, `let*`, `letrec`, `letrec*` e `named let`;
 - `begin`;
 - `set!`;
-- `and`, `or`;
-- `when`, `unless`;
+- `and` e `or`;
+- `when` e `unless`;
 - `do`;
+- `delay` e `force`;
 - `quote` e `quasiquote`;
 - chamadas de funções;
-- operações aritméticas, booleanas, listas, strings, caracteres, vetores e entrada/saída básica por meio do runtime Python.
+- operações aritméticas, booleanas, de listas, strings, caracteres, vetores e entrada/saída básica por meio do runtime Python.
 
-## Analise Semântica
+## Análise semântica
 
 A etapa semântica usa uma tabela de símbolos com escopos para verificar:
 
@@ -201,17 +209,18 @@ A etapa semântica usa uma tabela de símbolos com escopos para verificar:
 - parâmetros de funções e lambdas;
 - atribuições com `set!`;
 - aridade de funções quando conhecida;
-- tipos básicos associados aos literais e expressões.
+- tipos básicos associados a literais e expressões;
+- usos estaticamente inválidos de alguns built-ins numéricos, de listas, strings, caracteres e vetores.
 
-Quando erros semânticos sao encontrados, a compilação e interrompida antes da geração de código Python final.
+Quando erros semânticos são encontrados, a compilação é interrompida antes da geração do código Python final.
 
-## Geração de Código
+## Geração de código
 
-A saída gerada e código Python 3.
+A saída gerada é código Python 3.
 
 O arquivo Python gerado importa `scheme_runtime.py`, que implementa funções auxiliares para aproximar a semântica de Scheme em Python, por exemplo:
 
-- operações aritméticas n-arias;
+- operações aritméticas n-árias;
 - listas e pares;
 - predicados;
 - comparações;
@@ -219,22 +228,24 @@ O arquivo Python gerado importa `scheme_runtime.py`, que implementa funções au
 - vetores;
 - entrada e saída simples.
 
-Por isso, para executar o Python gerado, o arquivo `scheme_runtime.py` deve estar no mesmo diretorio ou acessivel pelo `PYTHONPATH`.
+Para executar o Python gerado, o arquivo `scheme_runtime.py` deve estar no mesmo diretório do programa Python gerado ou acessível pelo `PYTHONPATH`.
 
-## Limitações Conhecidas
+## Limitações conhecidas
 
-Este compilador implementa um subconjunto de Scheme, não a linguagem completa especificada pelas referencias R4RS/R5RS.
-
-Consulte também `RELATORIO.md` para a matriz de aderência ao R4RS e o status detalhado de cada área da especificação.
+Este compilador implementa um subconjunto de Scheme, não a linguagem completa especificada pelas referências R4RS/R5RS.
 
 Limitações importantes:
 
 - macros completas de Scheme não são implementadas;
 - `define-syntax`, `let-syntax`, `letrec-syntax` e `syntax-rules` não são suportados completamente;
-- continuações e recursos avançados são tratados de forma limitada pelo runtime;
+- recursão de cauda adequada não é garantida, pois o código final usa chamadas Python comuns;
+- continuações e `call/cc` são tratados de forma limitada;
+- números complexos não são suportados;
 - alguns comportamentos dinâmicos de Scheme são aproximados por estruturas Python;
-- a verificação de tipos e estatica e conservadora, pois Scheme e uma linguagem dinamicamente tipada;
-- alguns casos complexos de `letrec`, `set!` em expressões e closures podem depender das limitações naturais da traducao para Python.
+- a verificação de tipos é estática e conservadora, pois Scheme é uma linguagem dinamicamente tipada;
+- alguns casos complexos de `letrec`, `set!`, closures e quasiquote podem depender das limitações naturais da tradução para Python.
+
+Consulte `RELATORIO.md` para a matriz de aderência ao R4RS, as limitações detalhadas e a atuação de cada integrante.
 
 ## Referências
 
