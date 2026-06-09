@@ -8,23 +8,10 @@
 #include <sstream>
 #include <string>
 
-/*
- * yylval e a variavel global criada pelo Bison para transportar o valor
- * semantico do token reconhecido pelo scanner ate o parser. Cada regra Flex
- * preenche o campo correto antes de retornar um TOK_*.
- */
+/* valor semântico do token, preenchido antes de retornar TOK_* */
 extern YYSTYPE yylval;
 
-/*
- * Remove as aspas externas de uma string Scheme e converte escapes conhecidos
- * para os caracteres reais que serao armazenados na AST.
- *
- * Exemplo:
- *   "a\nb"  ->  a, quebra de linha, b
- *
- * Observacao: alguns escapes aqui sao extensoes praticas do projeto; o R4RS
- * formaliza um conjunto menor.
- */
+/* converte escapes de string Scheme para chars reais (\n, \t, etc.) */
 static std::string processString(const char* raw) {
     std::string s;
     const char* p = raw + 1;               /* pula aspas de abertura */
@@ -50,11 +37,7 @@ static std::string processString(const char* raw) {
     return s;
 }
 
-/*
- * Normaliza texto ASCII para minusculas. Scheme/R4RS trata identificadores de
- * forma case-insensitive, entao simbolos como FOO e foo devem representar o
- * mesmo identificador interno.
- */
+/* Scheme é case-insensitive — FOO e foo viram o mesmo símbolo */
 static std::string lowerAscii(const std::string& in) {
     std::string out;
     out.reserve(in.size());
@@ -63,28 +46,13 @@ static std::string lowerAscii(const std::string& in) {
     return out;
 }
 
-/*
- * Duplica uma string normalizada para minusculas em memoria C.
- *
- * O parser usa char* nos tokens vindos do Flex/Bison; por isso retornamos uma
- * copia alocada com strdup, que depois e liberada nas acoes do parser.
- */
+/* copia para char* em minúsculo (liberado no parser depois do free($1)) */
 static char* dupLower(const char* raw) {
     std::string s = lowerAscii(raw);
     return strdup(s.c_str());
 }
 
-/*
- * Extrai o valor de um literal de caractere Scheme.
- *
- * Entrada do scanner:
- *   #\a       -> "a"
- *   #\space   -> "space"
- *   #\newline -> "newline"
- *
- * Nomes padronizados sao normalizados para minusculas; caracteres simples
- * preservam o valor lido.
- */
+/* trata #\a, #\space, #\newline etc. */
 static char* dupCharToken(const char* raw) {
     std::string value = raw + 2;
     std::string lower = lowerAscii(value);
@@ -93,17 +61,7 @@ static char* dupCharToken(const char* raw) {
     return strdup(value.c_str());
 }
 
-/*
- * Remove prefixos numericos R4RS de radix/exatidao e informa a base.
- *
- * Exemplos:
- *   #b1010   -> corpo "1010", base 2
- *   #e#x0a   -> corpo "0a", base 16
- *   #i10     -> corpo "10", base 10
- *
- * Prefixos de exatidao (#e/#i) sao reconhecidos, mas a AST atual ainda guarda
- * somente o valor numerico convertido.
- */
+/* arranca #b/#o/#d/#x e opcionais #e/#i, devolve a base detectada */
 static std::string stripNumberPrefixes(const char* raw, int& base) {
     std::string s = lowerAscii(raw);
     base = 10;
@@ -122,24 +80,14 @@ static std::string stripNumberPrefixes(const char* raw, int& base) {
     return s.substr(pos);
 }
 
-/*
- * Converte um inteiro possivelmente prefixado para long long.
- *
- * A base e definida por stripNumberPrefixes. Assim a mesma funcao serve para
- * literais binarios, octais, decimais e hexadecimais.
- */
+/* strtoll na base detectada por stripNumberPrefixes */
 static long long parsePrefixedInteger(const char* raw) {
     int base = 10;
     std::string body = stripNumberPrefixes(raw, base);
     return (long long)strtoll(body.c_str(), nullptr, base);
 }
 
-/*
- * Converte um racional possivelmente prefixado para a forma decimal "n/d".
- *
- * O parser ja espera receber o racional como string "num/den"; aqui fazemos a
- * conversao quando o literal veio em outra base, como #xA/#x2.
- */
+/* converte racional prefixado (ex: #xA/#x2) para a string "10/2" */
 static char* dupPrefixedRational(const char* raw) {
     int base = 10;
     std::string body = stripNumberPrefixes(raw, base);
@@ -154,12 +102,7 @@ static char* dupPrefixedRational(const char* raw) {
     return strdup(oss.str().c_str());
 }
 
-/*
- * Converte um decimal inexato para double.
- *
- * O R4RS aceita marcadores de expoente alem de e/E, como s, f, d e l. Para
- * reaproveitar atof, esses marcadores sao normalizados para 'e'.
- */
+/* R4RS permite s/f/d/l como marcadores de expoente além do 'e' padrão */
 static double parsePrefixedFloat(const char* raw) {
     int base = 10;
     std::string body = stripNumberPrefixes(raw, base);
@@ -171,29 +114,15 @@ static double parsePrefixedFloat(const char* raw) {
 }
 %}
 
-/*
- * Opcoes do Flex:
- * - noyywrap: nao chama yywrap ao fim do arquivo.
- * - yylineno: atualiza yylineno automaticamente.
- * - nounput/noinput: evita gerar funcoes nao usadas.
- * - caseless: deixa o reconhecimento dos padroes case-insensitive.
- */
 %option noyywrap
 %option yylineno
 %option nounput
 %option noinput
-%option caseless
+%option caseless   /* Scheme é case-insensitive */
 
 /* Estado exclusivo usado enquanto o scanner esta dentro de um comentario #| |#. */
 %x BLOCK_COMMENT
 
-/*
- * Definicoes auxiliares de regex.
- *
- * Flex permite nomear pedacos de expressoes regulares para tornar as regras
- * principais mais legiveis. Esses nomes nao geram tokens sozinhos; eles apenas
- * sao reutilizados nas regras abaixo.
- */
 DIGIT        [0-9]
 BINDIGIT     [01]
 OCTDIGIT     [0-7]

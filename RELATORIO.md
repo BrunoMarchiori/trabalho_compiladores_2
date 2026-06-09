@@ -1,5 +1,49 @@
 # Relatorio de Aderencia ao R4RS
 
+## Atuacao dos Membros
+
+### Bruno Adji — Scanner, Parser e AST
+
+Responsavel pela analise lexica e sintatica do compilador.
+
+Implementou o scanner Flex (`scanner.l`) com suporte aos prefixos numericos do R4RS (`#b`, `#o`, `#d`, `#x`) combinados com marcadores de exatidao (`#e`, `#i`), processamento de strings com escapes, literais de caractere nomeados (`#\space`, `#\newline`), comentarios de bloco (`#| |#`) e normalizacao de simbolos para minusculas via `%option caseless`. Implementou tambem as funcoes auxiliares de conversao numerica no bloco `%{...%}` do scanner.
+
+Implementou o parser Bison (`parser.y`) com a gramatica de datum, suporte a pares pontuados, vetores e abreviacoes de citacao. Resolveu o problema de ordem inversa de acumulacao do Bison revertendo a lista de datums na acao do `program`.
+
+Definiu a estrutura de nos da AST (`ast.hpp` / `ast.cpp`), os enums `NodeKind` e `SchemeType`, e todas as funcoes auxiliares de manipulacao de listas encadeadas (`listLen`, `listGet`, `listToVec`, `nodeToString`).
+
+---
+
+### Bruno Marchiori — Tabela de Simbolos e Analise Semantica
+
+Responsavel pela verificacao de tipos e contexto de identificadores.
+
+Implementou a tabela de simbolos (`symtable.hpp` / `symtable.cpp`) com pilha de escopos lexicos e o registro inicial de mais de cem procedimentos built-in com seus tipos de retorno e aridades.
+
+Implementou o analisador semantico (`analyzer.hpp` / `analyzer.cpp`) cobrindo todas as formas especiais: `define`, `lambda`, `if`, `cond`, `case`, `let`, `let*`, `letrec`, `letrec*`, `begin`, `set!`, `and`, `or`, `when`, `unless`, `do`, `quote` e `quasiquote`. Implementou a pre-declaracao de definicoes internas (`predeclareBody`) para permitir recursao mutua local. Implementou a verificacao de tipos de argumentos para built-ins numericos, de lista, string, char e vetor.
+
+---
+
+### Mateus Maia — Geracao de Codigo
+
+Responsavel pela traducao da AST para Python.
+
+Implementou o gerador de codigo (`codegen.hpp` / `codegen.cpp`) com as rotinas `genExpr` e `genStmt` para todas as formas da linguagem. Resolveu o problema de closures com `set!` usando a tecnica de boxing: variaveis mutadas viram listas de um elemento (`[val]`) e o acesso e feito por `box[0]`. Implementou `and`/`or` com walrus operator (`:=`) para garantir curto-circuito sem dupla avaliacao. Implementou `let` como lambda IIFE, `let*` como lambdas encadeadas e `letrec` com walrus em lista. Implementou named let e `do` como funcoes e loops Python. Implementou o mapeamento de identificadores Scheme para Python (`pyId`) e a tabela de built-ins. Implementou o driver principal do compilador (`main.cpp`).
+
+---
+
+### Thiago Arruda — Runtime Python, Testes e Documentacao
+
+Responsavel pela biblioteca de suporte ao codigo gerado, pelos exemplos e pela documentacao.
+
+Implementou `scheme_runtime.py` com mais de duzentas linhas de Python, cobrindo aritmetica n-aria com suporte a `Fraction`, comparacoes n-arias, predicados de tipo, operacoes de lista, strings, caracteres, vetores, I/O basico, controle de fluxo e uma implementacao limitada de continuacoes via excecao.
+
+Criou os arquivos de exemplo organizados em `examples/basic/` (validos e invalidos) e `examples/r4rs/` (por categoria do R4RS), e o script de testes automatizados `scripts/run_tests.sh`.
+
+Escreveu o `README.md` com instrucoes de compilacao e execucao, e o `RELATORIO.md` com a matriz de aderencia ao R4RS documentando o status de cada area da especificacao.
+
+---
+
 Este relatorio registra a aderencia do compilador Scheme para Python em relacao ao R4RS, usando as referencias listadas no README:
 
 - https://www.scheme.org/

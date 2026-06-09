@@ -422,11 +422,8 @@ std::string CodeGen::genBeginExpr(const std::vector<Node*>& body) {
     bool hasSet = false;
     for (Node* n : body) if (containsSetBang(n)) { hasSet = true; break; }
     if (hasSet) {
-        // gera como def + chamada imediata
+        // set! em begin-expr: usa lista trick porque Python não tem bloco inline
         std::string fname = newLambda();
-        // não é possível gerar def inline como expressão pura,
-        // mas podemos usar (lambda: [...])()
-        // Limitação documentada: set! dentro de begin-expr pode não propagar corretamente
         std::string s = "(lambda: [";
         for (size_t i = 0; i < body.size(); i++) {
             if (i) s += ", ";

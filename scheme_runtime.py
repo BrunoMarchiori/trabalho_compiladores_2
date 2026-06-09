@@ -278,6 +278,8 @@ def _string_to_list(s): return list(s)
 def _list_to_string(lst): return ''.join(lst)
 def _mk_string(*args): return ''.join(args)
 def _make_string(n, c=' '): return c * n
+def _string_contains(s, sub): return sub in s
+def _string_split(s, sep): return list(s.split(sep))
 
 # ── Caracteres ────────────────────────────────────────────────
 
