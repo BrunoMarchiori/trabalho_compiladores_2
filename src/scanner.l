@@ -118,7 +118,7 @@ static double parsePrefixedFloat(const char* raw) {
 %option yylineno
 %option nounput
 %option noinput
-%option caseless   /* Scheme é case-insensitive */
+%option case-insensitive
 
 /* Estado exclusivo usado enquanto o scanner esta dentro de um comentario #| |#. */
 %x BLOCK_COMMENT
