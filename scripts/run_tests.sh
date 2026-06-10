@@ -23,6 +23,10 @@ valid_cases=(
 invalid_cases=(
   "examples/basic/invalid/invalid_scope.scm"
   "examples/basic/invalid/invalid_type.scm"
+  "examples/basic/invalid/invalid_lexical_1.scm"
+  "examples/basic/invalid/invalid_lexical_2.scm"
+  "examples/basic/invalid/invalid_syntax_1.scm"
+  "examples/basic/invalid/invalid_syntax_2.scm"
   "examples/r4rs/invalid/r4rs_invalid_scope.scm"
   "examples/r4rs/invalid/r4rs_invalid_type.scm"
 )
