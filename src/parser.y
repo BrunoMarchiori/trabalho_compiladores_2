@@ -12,8 +12,9 @@ void yyerror(const char* msg);
 /* raiz da AST; acessada pelo main.cpp */
 Node* parseResult = nullptr;
 
-/* contador de erros de parsing */
+/* contadores de erros por fase */
 int parseErrors = 0;
+int lexErrors   = 0;
 %}
 
 /* ── Tipos do union ────────────────────────────────────── */
@@ -181,6 +182,6 @@ abbreviation
 %%
 
 void yyerror(const char* msg) {
-    fprintf(stderr, "Erro sintático [linha %d]: %s\n", yylineno, msg);
+    fprintf(stderr, "Erro sintático [%d:0]: %s\n", yylineno, msg);
     parseErrors++;
 }

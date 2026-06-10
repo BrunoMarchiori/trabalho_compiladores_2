@@ -14,6 +14,7 @@ extern int   yyparse();
 extern FILE* yyin;
 extern Node* parseResult;
 extern int   parseErrors;
+extern int   lexErrors;
 
 static void usage(const char* prog) {
     std::cerr << "Uso: " << prog << " <entrada.scm> [saida.py]\n";
@@ -35,9 +36,12 @@ int main(int argc, char* argv[]) {
     yyparse();
     fclose(yyin);
 
-    if (parseErrors > 0 || !parseResult) {
-        std::cerr << "Compilação interrompida: " << parseErrors
-                  << " erro(s) sintático(s).\n";
+    if (lexErrors > 0 || parseErrors > 0 || !parseResult) {
+        if (lexErrors > 0)
+            std::cerr << "Resumo: " << lexErrors << " erro(s) léxico(s).\n";
+        if (parseErrors > 0)
+            std::cerr << "Resumo: " << parseErrors << " erro(s) sintático(s).\n";
+        std::cerr << "Compilação interrompida.\n";
         return 1;
     }
 

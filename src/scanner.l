@@ -11,6 +11,8 @@
 /* valor semântico do token, preenchido antes de retornar TOK_* */
 extern YYSTYPE yylval;
 
+extern int lexErrors;
+
 /* converte escapes de string Scheme para chars reais (\n, \t, etc.) */
 static std::string processString(const char* raw) {
     std::string s;
@@ -282,8 +284,9 @@ EXP_MARK     [esfdl]
 
  /* ── Erro ────────────────────────────────────────────── */
 .                            {
-    fprintf(stderr, "Erro léxico [linha %d]: caractere inesperado '%s'\n",
+    fprintf(stderr, "Erro léxico [%d:0]: caractere inesperado '%s'\n",
             yylineno, yytext);
+    lexErrors++;
 }
 
 %%
